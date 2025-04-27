@@ -25,7 +25,7 @@ SECRET_KEY = 'django-insecure-0on20mp52(5-!55_)@aa=5tfr^vuvj8wex7#@&lq@_rxqqntji
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['192.168.1.12', 'localhost', '127.0.0.1']
+ALLOWED_HOSTS = ['192.168.1.31', 'localhost', '127.0.0.1']
 
 
 
@@ -57,7 +57,7 @@ MIDDLEWARE = [
 ROOT_URLCONF = 'myproject.urls'
 
 CORS_ALLOWED_ORIGINS = [
-    "http://192.168.1.12:8081",  # React Native app URL
+    "http://192.168.1.31:8081",  # React Native app URL
 ]
 CORS_ORIGIN_ALLOW_ALL = True 
 

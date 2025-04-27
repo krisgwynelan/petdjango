@@ -1,44 +1,62 @@
-from django.shortcuts import render
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework import status
-from django.contrib.auth.models import User
-from django.core.exceptions import ValidationError
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.contrib.auth.hashers import make_password, check_password  # For hashing and checking passwords
+from .models import User
+import json
 
-class RegisterView(APIView):
-    def post(self, request):
-        data = request.data
-        
-        print("Received data:", data)  # Add a print statement to log the data
+# Create User
+@csrf_exempt
+def create_user(request):
+    if request.method == 'POST':
+        data = json.loads(request.body)
 
-        # Validate the required fields
-        required_fields = ['first_name', 'last_name', 'email', 'password', 'username']
-        for field in required_fields:
-            if field not in data or not data[field]:
-                return Response({"message": f"{field} is required!"}, status=status.HTTP_400_BAD_REQUEST)
+        first_name = data.get('first_name')
+        last_name = data.get('last_name')
+        email = data.get('email')
+        password = data.get('password')
+
+        if not (first_name and last_name and email and password):
+            return JsonResponse({'error': 'Missing fields'}, status=400)
+
+        if User.objects.filter(email=email).exists():
+            return JsonResponse({'error': 'Email already exists'}, status=400)
+
+        # Hash the password before saving it
+        hashed_password = make_password(password)
+
+        user = User.objects.create(
+            first_name=first_name,
+            last_name=last_name,
+            email=email,
+            password=hashed_password  # Store the hashed password
+        )
+
+        return JsonResponse({'message': 'User created successfully'}, status=201)
+    else:
+        return JsonResponse({'error': 'Invalid request method'}, status=400)
+
+
+# Login User
+@csrf_exempt
+def login_user(request):
+    if request.method == 'POST':
+        data = json.loads(request.body)
+
+        email = data.get('email')
+        password = data.get('password')
+
+        if not (email and password):
+            return JsonResponse({'error': 'Missing email or password'}, status=400)
 
         try:
-            # Check if the email is already taken
-            if User.objects.filter(email=data['email']).exists():
-                return Response({"message": "Email is already registered!"}, status=status.HTTP_400_BAD_REQUEST)
+            user = User.objects.get(email=email)
+        except User.DoesNotExist:
+            return JsonResponse({'error': 'User does not exist'}, status=400)
 
-            # Check if the username is already taken
-            if User.objects.filter(username=data['username']).exists():
-                return Response({"message": "Username is already taken!"}, status=status.HTTP_400_BAD_REQUEST)
-
-            # Create user and hash the password
-            user = User.objects.create(
-                first_name=data['first_name'],
-                last_name=data['last_name'],
-                email=data['email'],
-                username=data['username'],  # Make sure username is included
-            )
-            user.set_password(data['password'])  # Hash the password before saving
-            user.save()
-
-            return Response({"message": "User created successfully!"}, status=status.HTTP_201_CREATED)
-
-        except ValidationError as e:
-            return Response({"message": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-        except Exception as e:
-            return Response({"message": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        # Check the password
+        if check_password(password, user.password):
+            return JsonResponse({'message': 'Login successful'}, status=200)
+        else:
+            return JsonResponse({'error': 'Invalid password'}, status=400)
+    else:
+        return JsonResponse({'error': 'Invalid request method'}, status=400)
